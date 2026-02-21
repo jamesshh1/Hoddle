@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoddle - Football Player Guessing Game</title>
+<link rel="icon" type="image/jpeg" href="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Glenn_Hoddle_2014_%28cropped%29.jpg/32px-Glenn_Hoddle_2014_%28cropped%29.jpg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a1628;
+    color: #e0e6ed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    font-size: 2.5rem;
+    margin: 2rem 0 0.5rem;
+    letter-spacing: 0.1em;
+    color: #4fc3f7;
+  }
+  .subtitle {
+    color: #78909c;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+  .game-container {
+    width: 100%;
+    max-width: 640px;
+    padding: 0 1rem;
+  }
+
+  /* Landing page */
+  .landing {
+    text-align: center;
+    padding: 2rem 0;
+  }
+  .mode-buttons {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  .mode-btn {
+    background: #142038;
+    border: 2px solid #1e3a5f;
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    min-width: 200px;
+  }
+  .mode-btn:hover {
+    border-color: #4fc3f7;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(79, 195, 247, 0.15);
+  }
+  .mode-btn .mode-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e0e6ed;
+    margin-bottom: 0.5rem;
+  }
+  .mode-btn .mode-desc {
+    font-size: 0.85rem;
+    color: #78909c;
+    line-height: 1.4;
+  }
+  .mode-btn.easy .mode-name { color: #66bb6a; }
+  .mode-btn.easy:hover { border-color: #66bb6a; box-shadow: 0 8px 24px rgba(102, 187, 106, 0.15); }
+  .mode-btn.hard .mode-name { color: #c8102e; }
+  .mode-btn.hard { border-color: #2a1040; }
+  .mode-btn.hard:hover { border-color: #c8102e; box-shadow: 0 8px 24px rgba(200, 16, 46, 0.2); }
+
+  .guesses-remaining {
+    text-align: center;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: #90a4ae;
+  }
+  .guesses-remaining span {
+    color: #4fc3f7;
+    font-weight: 700;
+  }
+
+  /* Clue cards */
+  .clue-card {
+    background: #142038;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.4s ease;
+  }
+  .clue-card.hidden { display: none; }
+  .clue-card.revealed {
+    animation: fadeSlideIn 0.5s ease forwards;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .clue-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #4fc3f7;
+    margin-bottom: 0.75rem;
+  }
+  .club-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .club-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    color: #78909c;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #1e3a5f;
+  }
+  .club-table th:nth-child(2),
+  .club-table th:nth-child(3) {
+    text-align: center;
+  }
+  .club-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #1a2d4a;
+  }
+  .club-table td:nth-child(2),
+  .club-table td:nth-child(3) {
+    text-align: center;
+    color: #90a4ae;
+  }
+  .club-table tr:last-child td { border-bottom: none; }
+  .club-table .club-name { font-weight: 600; }
+  .club-table .club-years { color: #78909c; font-size: 0.8rem; }
+  .position-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .photo-container {
+    text-align: center;
+  }
+  .photo-container img {
+    max-width: 250px;
+    border-radius: 12px;
+    border: 2px solid #1e3a5f;
+  }
+  .photo-container .no-photo {
+    color: #546e7a;
+    font-style: italic;
+  }
+
+  /* Search input */
+  .search-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    font-size: 1.05rem;
+    border: 2px solid #1e3a5f;
+    border-radius: 12px;
+    background: #0f1d30;
+    color: #e0e6ed;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrapper input:focus { border-color: #4fc3f7; }
+  .search-wrapper input::placeholder { color: #546e7a; }
+  .search-wrapper input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: #142038;
+    border: 1px solid #1e3a5f;
+    border-radius: 0 0 12px 12px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+  }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item {
+    padding: 0.7rem 1.2rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #1a2d4a;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover,
+  .autocomplete-item.active {
+    background: #1a3050;
+    color: #4fc3f7;
+  }
+  .autocomplete-item mark {
+    background: none;
+    color: #4fc3f7;
+    font-weight: 700;
+  }
+
+  /* Wrong guess feedback */
+  .guess-history {
+    margin-bottom: 1rem;
+  }
+  .guess-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    color: #ef5350;
+    font-size: 0.95rem;
+    animation: fadeSlideIn 0.3s ease forwards;
+  }
+  .guess-entry .x-mark { font-weight: 700; }
+
+  /* Result */
+  .result-card {
+    text-align: center;
+    background: #142038;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1rem;
+  }
+  .result-card.win { border-color: #66bb6a; }
+  .result-card.lose { border-color: #ef5350; }
+  .result-card h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .result-card.win h2 { color: #66bb6a; }
+  .result-card.lose h2 { color: #ef5350; }
+  .result-card .player-name {
+    font-size: 1.3rem;
+    color: #4fc3f7;
+    margin-bottom: 1rem;
+  }
+  .result-card img {
+    max-width: 200px;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+  .result-card a {
+    color: #4fc3f7;
+    text-decoration: none;
+  }
+  .result-card a:hover { text-decoration: underline; }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #4fc3f7;
+    color: #0a1628;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #81d4fa; }
+
+  .loading {
+    text-align: center;
+    padding: 3rem;
+    color: #546e7a;
+    font-size: 1.1rem;
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .modal {
+    background: #142038;
+    border: 1px solid #1e3a5f;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    animation: modalSlideIn 0.35s ease;
+  }
+  @keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal.win { border-color: #66bb6a; }
+  .modal.lose { border-color: #ef5350; }
+  .modal h2 {
+    font-size: 1.6rem;
+    margin-bottom: 0.75rem;
+  }
+  .modal.win h2 { color: #66bb6a; }
+  .modal.lose h2 { color: #ef5350; }
+  .modal .modal-player {
+    font-size: 1.2rem;
+    color: #4fc3f7;
+    margin-bottom: 1rem;
+  }
+  .modal .modal-summary {
+    background: #0f1d30;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-family: monospace;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    white-space: pre-line;
+    color: #e0e6ed;
+  }
+  .modal .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-copy {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #66bb6a;
+    color: #0a1628;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: background 0.2s;
+  }
+  .btn-copy:hover { background: #81c784; }
+  .btn-copy.copied { background: #4fc3f7; }
+</style>
+</head>
+<body>
+<h1>HODDLE</h1>
+<p class="subtitle">Guess the Barclays Premier League player</p>
+
+<div class="game-container">
+  <div id="loading" class="loading">Loading players...</div>
+
+  <div id="landing" style="display:none;">
+    <div class="landing">
+      <div class="mode-buttons">
+        <button class="mode-btn easy" onclick="startGame('easy')">
+          <div class="mode-name">Barclaysman</div>
+          <div class="mode-desc">Legends of the Barclays Premier League era</div>
+        </button>
+        <button class="mode-btn hard" onclick="startGame('hard')">
+          <div class="mode-name">All Players</div>
+          <div class="mode-desc">Any player from the Barclays Premier League era</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="game" style="display:none;">
+    <p class="guesses-remaining">Guesses remaining: <span id="remaining">3</span></p>
+
+    <div id="clue-clubs" class="clue-card hidden">
+      <div class="clue-label">Career History</div>
+      <div id="clubs-content"></div>
+    </div>
+
+    <div id="clue-position" class="clue-card hidden">
+      <div class="clue-label">Position</div>
+      <div id="position-content" class="position-text"></div>
+    </div>
+
+    <div id="clue-photo" class="clue-card hidden">
+      <div class="clue-label">Photo</div>
+      <div id="photo-content" class="photo-container"></div>
+    </div>
+
+    <div id="guess-history" class="guess-history"></div>
+
+    <div class="search-wrapper">
+      <input type="text" id="search-input" placeholder="Type a player name..." autocomplete="off">
+      <div id="autocomplete" class="autocomplete-list"></div>
+    </div>
+  </div>
+
+  <div id="result" style="display:none;"></div>
+</div>
+
+<script>
+const CSV_PATH = 'players_CP.csv';
+let allPlayers = [];
+let players = []; // filtered pool for autocomplete
+let easyPool = [];
+let target = null;
+let guessesLeft = 3;
+let gameOver = false;
+let activeIdx = -1;
+let guessedNames = new Set();
+let currentMode = null;
+
+const PL_CLUBS = [
+  "Arsenal", "Aston Villa", "Birmingham City", "Blackburn Rovers",
+  "Blackpool", "Bolton Wanderers", "Bournemouth", "Burnley",
+  "Cardiff City", "Charlton Athletic", "Chelsea", "Crystal Palace",
+  "Derby County", "Everton", "Fulham", "Hull City", "Ipswich Town",
+  "Leeds United", "Leicester City", "Liverpool", "Manchester City",
+  "Manchester United", "Newcastle United", "Norwich City", "Portsmouth",
+  "Queens Park Rangers", "Reading", "Sheffield United", "Southampton",
+  "Stoke City", "Sunderland", "Swansea City", "Tottenham Hotspur",
+  "Watford", "West Bromwich Albion", "West Ham United", "Wigan Athletic",
+  "Wolverhampton Wanderers"
+];
+
+const BIG_CLUBS = [
+  "Chelsea", "Manchester City", "Manchester United", "Arsenal",
+  "Tottenham Hotspur", "Newcastle United", "Liverpool"
+];
+
+const HARDCODED_EASY = [
+  "Jermaine Defoe", "Peter Crouch", "Dimitar Berbatov", "Djibril Cissé",
+  "James Beattie", "Kevin Phillips", "Amr Zaki", "Kevin Nolan",
+  "Youri Djorkaeff", "Obafemi Martins", "Shaun Wright-Phillips",
+  "Jussi Jääskeläinen", "Nwankwo Kanu", "Steven Pienaar", "Kevin Davies",
+  "Lomana LuaLua", "Shaka Hislop", "Bafétimbi Gomis", "Craig Bellamy",
+  "Steed Malbranque", "Bobby Zamora", "Niko Kranjčar", "Juninho",
+  "Tim Cahill", "Demba Ba", "Papiss Cissé", "Zoltán Gera",
+  "Tugay Kerimoglu", "Roque Santa Cruz", "Adel Taarabt", "Yakubu",
+  "Jay-Jay Okocha", "Michu", "Rory Delap", "Morten Gamst Pedersen", 
+  "Cristiano Ronaldo", "Gareth Bale", "Rio Ferdinand",
+  "Alex Ferguson", "Arsène Wenger", "José Mourinho", "Rafael Benítez",
+  "Roberto Mancini", "Manuel Pellegrini", "David Moyes", "Sam Allardyce",
+  "Harry Redknapp", "Mark Hughes (manager)", "Martin O'Neill",
+  "Brett Emerton", "Titus Bramble", "Ivan Campo", "Matthew Taylor",
+  "Kieron Dyer", "Papa Bouba Diop", "Juan Pablo Ángel", "Hugo Rodallega",
+  "Brad Friedel", "Ali Al-Habsi", "Marouane Chamakh", "Martin Škrtel"
+];
+
+// Strip "(loan)" suffix to get base club name
+function baseClubName(name) {
+  return name.replace(/\s*\(loan\)\s*$/i, '').trim();
+}
+
+// Get a player's total apps and goals at a specific PL club (including loans)
+function playerStatsAtClub(player, clubName) {
+  let apps = 0, goals = 0;
+  for (const c of player.clubs) {
+    if (baseClubName(c.name) === clubName) {
+      apps += c.apps ? parseFloat(c.apps) || 0 : 0;
+      goals += c.goals !== '' ? parseFloat(c.goals) || 0 : 0;
+    }
+  }
+  return { apps, goals };
+}
+
+// Parse start/end years from a string like "2002–2006" or "2002–"
+function parseYears(yearsStr) {
+  if (!yearsStr) return [null, null];
+  const parts = yearsStr.match(/\d{4}/g);
+  if (!parts) return [null, null];
+  if (parts.length >= 2) return [parseInt(parts[0]), parseInt(parts[1])];
+  return [parseInt(parts[0]), 2025];
+}
+
+// Which clubs were in the PL each season (key = season start year)
+const PL_SEASONS = {
+  2001: ["Arsenal","Liverpool","Manchester United","Newcastle United","Leeds United","Chelsea","West Ham United","Aston Villa","Tottenham Hotspur","Blackburn Rovers","Southampton","Middlesbrough","Fulham","Charlton Athletic","Everton","Bolton Wanderers","Sunderland","Ipswich Town","Derby County","Leicester City"],
+  2002: ["Manchester United","Arsenal","Newcastle United","Chelsea","Liverpool","Blackburn Rovers","Everton","Southampton","Manchester City","Tottenham Hotspur","Middlesbrough","Charlton Athletic","Birmingham City","Fulham","Leeds United","Aston Villa","Bolton Wanderers","West Ham United","West Bromwich Albion","Sunderland"],
+  2003: ["Arsenal","Chelsea","Manchester United","Liverpool","Newcastle United","Aston Villa","Charlton Athletic","Bolton Wanderers","Fulham","Birmingham City","Middlesbrough","Southampton","Portsmouth","Tottenham Hotspur","Blackburn Rovers","Manchester City","Everton","Leicester City","Leeds United","Wolverhampton Wanderers"],
+  2004: ["Chelsea","Arsenal","Manchester United","Everton","Liverpool","Bolton Wanderers","Middlesbrough","Manchester City","Tottenham Hotspur","Aston Villa","Charlton Athletic","Birmingham City","Fulham","Newcastle United","Blackburn Rovers","Portsmouth","West Bromwich Albion","Crystal Palace","Norwich City","Southampton"],
+  2005: ["Chelsea","Manchester United","Liverpool","Arsenal","Tottenham Hotspur","Blackburn Rovers","Newcastle United","Bolton Wanderers","West Ham United","Wigan Athletic","Everton","Fulham","Charlton Athletic","Middlesbrough","Manchester City","Aston Villa","Portsmouth","Birmingham City","West Bromwich Albion","Sunderland"],
+  2006: ["Manchester United","Chelsea","Liverpool","Arsenal","Tottenham Hotspur","Everton","Bolton Wanderers","Reading","Portsmouth","Blackburn Rovers","Aston Villa","Middlesbrough","Newcastle United","Manchester City","West Ham United","Fulham","Wigan Athletic","Sheffield United","Charlton Athletic","Watford"],
+  2007: ["Manchester United","Chelsea","Arsenal","Liverpool","Everton","Aston Villa","Blackburn Rovers","Portsmouth","Manchester City","West Ham United","Tottenham Hotspur","Newcastle United","Middlesbrough","Wigan Athletic","Sunderland","Bolton Wanderers","Fulham","Reading","Birmingham City","Derby County"],
+  2008: ["Manchester United","Liverpool","Chelsea","Arsenal","Everton","Aston Villa","Fulham","Tottenham Hotspur","West Ham United","Manchester City","Wigan Athletic","Stoke City","Bolton Wanderers","Portsmouth","Blackburn Rovers","Sunderland","Hull City","Newcastle United","Middlesbrough","West Bromwich Albion"],
+  2009: ["Chelsea","Manchester United","Arsenal","Tottenham Hotspur","Manchester City","Aston Villa","Liverpool","Everton","Birmingham City","Blackburn Rovers","Stoke City","Fulham","Sunderland","Bolton Wanderers","Wolverhampton Wanderers","Wigan Athletic","West Ham United","Burnley","Hull City","Portsmouth"],
+  2010: ["Manchester United","Chelsea","Manchester City","Arsenal","Tottenham Hotspur","Liverpool","Everton","Fulham","Aston Villa","Sunderland","West Bromwich Albion","Newcastle United","Stoke City","Bolton Wanderers","Blackburn Rovers","Wigan Athletic","Wolverhampton Wanderers","Birmingham City","Blackpool","West Ham United"],
+  2011: ["Manchester City","Manchester United","Arsenal","Tottenham Hotspur","Newcastle United","Chelsea","Everton","Liverpool","Fulham","West Bromwich Albion","Swansea City","Norwich City","Sunderland","Stoke City","Wigan Athletic","Aston Villa","Queens Park Rangers","Bolton Wanderers","Blackburn Rovers","Wolverhampton Wanderers"],
+  2012: ["Manchester United","Manchester City","Chelsea","Arsenal","Tottenham Hotspur","Everton","Liverpool","West Bromwich Albion","Swansea City","West Ham United","Norwich City","Fulham","Stoke City","Southampton","Aston Villa","Newcastle United","Sunderland","Wigan Athletic","Reading","Queens Park Rangers"],
+  2013: ["Manchester City","Liverpool","Chelsea","Arsenal","Everton","Tottenham Hotspur","Manchester United","Southampton","Stoke City","Newcastle United","Crystal Palace","Swansea City","West Ham United","Sunderland","Aston Villa","Hull City","West Bromwich Albion","Norwich City","Fulham","Cardiff City"],
+  2014: ["Chelsea","Manchester City","Arsenal","Manchester United","Tottenham Hotspur","Liverpool","Southampton","Swansea City","Stoke City","Crystal Palace","Everton","West Ham United","West Bromwich Albion","Leicester City","Newcastle United","Sunderland","Aston Villa","Hull City","Burnley","Queens Park Rangers"],
+  2015: ["Leicester City","Arsenal","Tottenham Hotspur","Manchester City","Manchester United","Southampton","West Ham United","Liverpool","Stoke City","Chelsea","Everton","Swansea City","Watford","West Bromwich Albion","Crystal Palace","Bournemouth","Sunderland","Newcastle United","Norwich City","Aston Villa"]
+};
+
+// Estimate PL appearances for a player at a club between 2002-2015
+// Only counts appearances during seasons when the club was actually in the PL
+function playerPLApps2002to2015(player) {
+  let totalApps = 0;
+  for (const c of player.clubs) {
+    const base = baseClubName(c.name);
+    const [start, end] = parseYears(c.years);
+    if (start === null) continue;
+    const stintLength = Math.max(end - start, 1);
+    const appsPerYear = (c.apps ? parseFloat(c.apps) || 0 : 0) / stintLength;
+
+    // Count how many seasons in this stint the club was in the PL (2001/02 to 2015/16)
+    for (let season = Math.max(start, 2001); season <= Math.min(end - 1, 2015); season++) {
+      if (PL_SEASONS[season] && PL_SEASONS[season].includes(base)) {
+        totalApps += appsPerYear;
+      }
+    }
+  }
+  return totalApps;
+}
+
+// Get a player's total PL apps and goals across all PL clubs
+function playerPLStats(player) {
+  let apps = 0, goals = 0;
+  for (const c of player.clubs) {
+    const base = baseClubName(c.name);
+    if (PL_CLUBS.includes(base)) {
+      apps += c.apps ? parseFloat(c.apps) || 0 : 0;
+      goals += c.goals !== '' ? parseFloat(c.goals) || 0 : 0;
+    }
+  }
+  return { apps, goals };
+}
+
+// Check if player played for a given PL club
+function playedForClub(player, clubName) {
+  return player.clubs.some(c => baseClubName(c.name) === clubName);
+}
+
+function buildEasyPool() {
+  const selected = new Set();
+
+  // For each big club: 5 most apps + 3 top scorers
+  for (const club of BIG_CLUBS) {
+    const clubPlayers = allPlayers.filter(p => playedForClub(p, club));
+
+    const byApps = [...clubPlayers].sort((a, b) =>
+      playerStatsAtClub(b, club).apps - playerStatsAtClub(a, club).apps
+    );
+    byApps.slice(0, 5).forEach(p => selected.add(p.name));
+
+    const byGoals = [...clubPlayers].sort((a, b) =>
+      playerStatsAtClub(b, club).goals - playerStatsAtClub(a, club).goals
+    );
+    byGoals.slice(0, 3).forEach(p => selected.add(p.name));
+  }
+
+  // For each other PL club: 2 most apps + top scorer
+  const otherClubs = PL_CLUBS.filter(c => !BIG_CLUBS.includes(c));
+  for (const club of otherClubs) {
+    const clubPlayers = allPlayers.filter(p => playedForClub(p, club));
+
+    const byApps = [...clubPlayers].sort((a, b) =>
+      playerStatsAtClub(b, club).apps - playerStatsAtClub(a, club).apps
+    );
+    byApps.slice(0, 2).forEach(p => selected.add(p.name));
+
+    const byGoals = [...clubPlayers].sort((a, b) =>
+      playerStatsAtClub(b, club).goals - playerStatsAtClub(a, club).goals
+    );
+    if (byGoals.length) selected.add(byGoals[0].name);
+  }
+
+  // Explicitly excluded players
+  const EXCLUDED_EASY = ["Adam Smith", "César Azpilicueta", "David Silva", "David de Gea", "Jordan Henderson"];
+  EXCLUDED_EASY.forEach(name => selected.delete(name));
+
+  // Remove club-selected players with fewer than 120 PL apps between 2002-2015
+  for (const name of [...selected]) {
+    const player = allPlayers.find(p => p.name === name);
+    if (player && playerPLApps2002to2015(player) < 120) {
+      selected.delete(name);
+    }
+  }
+
+  // Add hardcoded players (fuzzy match on lowercase for accent variations)
+  const hardcodedLower = HARDCODED_EASY.map(n => n.toLowerCase());
+  for (const p of allPlayers) {
+    const nameLower = p.name.toLowerCase();
+    for (const hc of hardcodedLower) {
+      // Match if the CSV name contains the hardcoded name or vice versa
+      if (nameLower === hc || nameLower.includes(hc) || hc.includes(nameLower)) {
+        selected.add(p.name);
+        break;
+      }
+    }
+  }
+
+  easyPool = allPlayers.filter(p => selected.has(p.name));
+}
+
+// Parse CSV (handles quoted fields with commas)
+function parseCSV(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  let row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        row.push(current);
+        current = '';
+      } else if (ch === '\n' || (ch === '\r' && text[i + 1] === '\n')) {
+        row.push(current);
+        current = '';
+        rows.push(row);
+        row = [];
+        if (ch === '\r') i++;
+      } else {
+        current += ch;
+      }
+    }
+  }
+  if (current || row.length) {
+    row.push(current);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parsePlayer(headers, values) {
+  const get = (key) => {
+    const idx = headers.indexOf(key);
+    return idx >= 0 && idx < values.length ? values[idx].trim() : '';
+  };
+  const clubs = [];
+  for (let i = 1; i <= 38; i++) {
+    const name = get(`club_${i}_name`);
+    if (!name) break;
+    clubs.push({
+      years: get(`club_${i}_years`),
+      name,
+      apps: get(`club_${i}_apps`),
+      goals: get(`club_${i}_goals`),
+    });
+  }
+  return {
+    name: get('name'),
+    position: get('position'),
+    pageUrl: get('page_url'),
+    imageUrl: get('image_url'),
+    clubs,
+  };
+}
+
+async function loadPlayers() {
+  const res = await fetch(CSV_PATH);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  const headers = rows[0];
+  allPlayers = rows.slice(1)
+    .map(r => parsePlayer(headers, r))
+    .filter(p => p.name);
+  buildEasyPool();
+}
+
+function startGame(mode) {
+  currentMode = mode;
+  const pool = mode === 'easy' ? easyPool : allPlayers;
+  // Prefer players with an image
+  const withImage = pool.filter(p => p.imageUrl);
+  const pickFrom = withImage.length > 20 ? withImage : pool;
+  target = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+
+  // Autocomplete draws from the same pool
+  players = pool;
+
+  guessesLeft = 3;
+  gameOver = false;
+  guessedNames.clear();
+
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('remaining').textContent = guessesLeft;
+  renderClubs();
+  document.getElementById('search-input').focus();
+}
+
+function renderClubs() {
+  const el = document.getElementById('clubs-content');
+  const rows = target.clubs.map(c => {
+    const apps = c.apps ? Math.round(parseFloat(c.apps)) : '?';
+    const goals = c.goals !== '' ? Math.round(parseFloat(c.goals)) : '?';
+    return `<tr>
+      <td><span class="club-name">${esc(c.name)}</span><br><span class="club-years">${esc(c.years)}</span></td>
+      <td>${apps}</td>
+      <td>${goals}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="club-table">
+    <thead><tr><th>Club</th><th>Apps</th><th>Goals</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  showClue('clue-clubs');
+}
+
+function renderPosition() {
+  document.getElementById('position-content').textContent = target.position;
+  showClue('clue-position');
+}
+
+function renderPhoto() {
+  const el = document.getElementById('photo-content');
+  if (target.imageUrl) {
+    el.innerHTML = `<img src="${esc(target.imageUrl)}" alt="Player photo">`;
+  } else {
+    el.innerHTML = `<span class="no-photo">No photo available</span>`;
+  }
+  showClue('clue-photo');
+}
+
+function showClue(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('revealed');
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Autocomplete
+const input = document.getElementById('search-input');
+const acList = document.getElementById('autocomplete');
+
+function getMatches(query) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  return players
+    .filter(p => p.name.toLowerCase().includes(q) && !guessedNames.has(p.name.toLowerCase()))
+    .slice(0, 12);
+}
+
+function highlightMatch(name, query) {
+  const idx = name.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) return esc(name);
+  return esc(name.slice(0, idx)) +
+    '<mark>' + esc(name.slice(idx, idx + query.length)) + '</mark>' +
+    esc(name.slice(idx + query.length));
+}
+
+function renderAutocomplete() {
+  const query = input.value.trim();
+  const matches = getMatches(query);
+  activeIdx = -1;
+  if (!matches.length || !query) {
+    acList.classList.remove('open');
+    acList.innerHTML = '';
+    return;
+  }
+  acList.innerHTML = matches.map((p, i) =>
+    `<div class="autocomplete-item" data-index="${i}" data-name="${esc(p.name)}">${highlightMatch(p.name, query)}</div>`
+  ).join('');
+  acList.classList.add('open');
+
+  acList.querySelectorAll('.autocomplete-item').forEach(item => {
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      submitGuess(item.dataset.name);
+    });
+  });
+}
+
+input.addEventListener('input', renderAutocomplete);
+input.addEventListener('keydown', (e) => {
+  const items = acList.querySelectorAll('.autocomplete-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIdx = Math.min(activeIdx + 1, items.length - 1);
+    updateActive(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIdx = Math.max(activeIdx - 1, 0);
+    updateActive(items);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (activeIdx >= 0 && items[activeIdx]) {
+      submitGuess(items[activeIdx].dataset.name);
+    } else if (items.length === 1) {
+      submitGuess(items[0].dataset.name);
+    }
+  } else if (e.key === 'Escape') {
+    acList.classList.remove('open');
+  }
+});
+
+input.addEventListener('blur', () => {
+  setTimeout(() => acList.classList.remove('open'), 150);
+});
+input.addEventListener('focus', renderAutocomplete);
+
+function updateActive(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+  if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: 'nearest' });
+}
+
+function submitGuess(name) {
+  if (gameOver) return;
+  acList.classList.remove('open');
+  input.value = '';
+
+  const isCorrect = name.toLowerCase() === target.name.toLowerCase();
+  guessedNames.add(name.toLowerCase());
+
+  if (isCorrect) {
+    endGame(true);
+    return;
+  }
+
+  // Wrong guess
+  guessesLeft--;
+  document.getElementById('remaining').textContent = guessesLeft;
+
+  // Record wrong guess
+  const history = document.getElementById('guess-history');
+  const entry = document.createElement('div');
+  entry.className = 'guess-entry';
+  entry.innerHTML = `<span class="x-mark">✗</span> ${esc(name)}`;
+  history.appendChild(entry);
+
+  // Reveal clue based on which wrong guess this is
+  const wrongCount = 3 - guessesLeft;
+  if (wrongCount === 1) renderPosition();
+  if (wrongCount === 2) renderPhoto();
+
+  if (guessesLeft <= 0) {
+    endGame(false);
+  } else {
+    input.focus();
+  }
+}
+
+function buildShareText(won) {
+  const totalGuesses = 3;
+  const modeName = currentMode === 'easy' ? 'Barclaysman' : 'All Players';
+  // guessesLeft is only decremented on wrong guesses, so:
+  // wrong guesses = 3 - guessesLeft
+  // total guesses used = wrong guesses + (1 if won)
+  const wrongGuesses = totalGuesses - guessesLeft;
+  const guessNumber = won ? wrongGuesses + 1 : null;
+  const squares = [];
+  for (let i = 0; i < wrongGuesses; i++) squares.push('\u2b1b');
+  if (won) squares.push('\ud83d\udfe9');
+  while (squares.length < totalGuesses) squares.push('\u2b1c');
+
+  return `HODDLE (${modeName}) ${won ? guessNumber : 'X'}/${totalGuesses}\n${squares.join('')}`;
+}
+
+function showResultModal(won) {
+  const shareText = buildShareText(won).trim();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal ${won ? 'win' : 'lose'}">
+      <h2>${won ? 'Correct!' : 'Game Over'}</h2>
+      <div class="modal-player">${esc(target.name)}</div>
+      <div class="modal-summary">${esc(shareText)}</div>
+      <div class="btn-row">
+        <button class="btn-copy" id="copy-btn">Copy Result</button>
+        <button class="btn" onclick="location.reload()">Play Again</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.getElementById('copy-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('copy-btn');
+    try {
+      await navigator.clipboard.writeText(shareText);
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy Result';
+        btn.classList.remove('copied');
+      }, 2000);
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = shareText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy Result';
+        btn.classList.remove('copied');
+      }, 2000);
+    }
+  });
+}
+
+function endGame(won) {
+  gameOver = true;
+  input.disabled = true;
+  document.getElementById('game').querySelector('.guesses-remaining').style.display = 'none';
+
+  // Reveal all remaining clues
+  if (!document.getElementById('clue-clubs').classList.contains('revealed')) renderClubs();
+  if (!document.getElementById('clue-position').classList.contains('revealed')) renderPosition();
+  if (!document.getElementById('clue-photo').classList.contains('revealed')) renderPhoto();
+
+  showResultModal(won);
+}
+
+// Init
+(async () => {
+  await loadPlayers();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('landing').style.display = 'block';
+})();
+</script>
+</body>
+</html>
