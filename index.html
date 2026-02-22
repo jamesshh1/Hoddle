@@ -323,7 +323,7 @@
     color: #4fc3f7;
     margin-bottom: 1rem;
   }
-  .modal .modal-summary {
+  .modal-summary {
     background: #0f1d30;
     border: 1px solid #1e3a5f;
     border-radius: 10px;
@@ -335,7 +335,7 @@
     white-space: pre-line;
     color: #e0e6ed;
   }
-  .modal .btn-row {
+  .btn-row {
     display: flex;
     gap: 0.75rem;
     justify-content: center;
@@ -428,7 +428,7 @@
     .modal .modal-player {
       font-size: 1rem;
     }
-    .modal .modal-summary {
+    .modal-summary {
       font-size: 0.85rem;
       padding: 0.75rem;
     }
@@ -454,7 +454,7 @@
     <div class="landing">
       <div class="mode-buttons">
         <button class="mode-btn easy" onclick="startGame('easy')">
-          <div class="mode-name">Barclaysman</div>
+          <div class="mode-name">Easy</div>
           <div class="mode-desc">Legends of the Barclays Premier League era</div>
         </button>
         <button class="mode-btn hard" onclick="startGame('hard')">
@@ -946,7 +946,7 @@ function submitGuess(name) {
 
 function buildShareText(won) {
   const totalGuesses = 3;
-  const modeName = currentMode === 'easy' ? 'Barclaysman' : 'All Players';
+  const modeName = currentMode === 'easy' ? 'Easy' : 'All Players';
   // guessesLeft is only decremented on wrong guesses, so:
   // wrong guesses = 3 - guessesLeft
   // total guesses used = wrong guesses + (1 if won)
@@ -968,6 +968,7 @@ function showResultModal(won) {
     <div class="modal ${won ? 'win' : 'lose'}">
       <h2>${won ? 'Correct!' : 'Game Over'}</h2>
       <div class="modal-player">${esc(target.name)}</div>
+      ${target.imageUrl ? `<img src="${esc(target.imageUrl)}" alt="${esc(target.name)}" style="max-width:180px;border-radius:12px;margin-bottom:1rem;">` : ''}
       <div class="modal-summary">${esc(shareText)}</div>
       <div class="btn-row">
         <button class="btn-copy" id="copy-btn">Copy Result</button>
@@ -1020,6 +1021,45 @@ function endGame(won) {
   if (!document.getElementById('clue-photo').classList.contains('revealed')) renderPhoto();
 
   showResultModal(won);
+  showResultFooter(won);
+}
+
+function showResultFooter(won) {
+  const shareText = buildShareText(won).trim();
+  const resultDiv = document.getElementById('result');
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = `
+    <div class="result-card ${won ? 'win' : 'lose'}">
+      <h2>${won ? 'Correct!' : 'Game Over'}</h2>
+      <div class="player-name">${esc(target.name)}</div>
+      ${target.imageUrl ? `<img src="${esc(target.imageUrl)}" alt="${esc(target.name)}">` : ''}
+      ${target.pageUrl ? `<p><a href="${esc(target.pageUrl)}" target="_blank">Wikipedia →</a></p>` : ''}
+      <div class="modal-summary" style="margin-top:1rem;">${esc(shareText)}</div>
+      <div class="btn-row" style="margin-top:1rem;">
+        <button class="btn-copy" id="footer-copy-btn">Copy Result</button>
+        <button class="btn" onclick="location.reload()">Play Again</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('footer-copy-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('footer-copy-btn');
+    try {
+      await navigator.clipboard.writeText(shareText);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = shareText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy Result';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 
 // Init
