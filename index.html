@@ -75,6 +75,51 @@
   .mode-btn.hard .mode-name { color: #c8102e; }
   .mode-btn.hard { border-color: #2a1040; }
   .mode-btn.hard:hover { border-color: #c8102e; box-shadow: 0 8px 24px rgba(200, 16, 46, 0.2); }
+  .mode-btn.club .mode-name { color: #ffa726; }
+  .mode-btn.club { border-color: #3e2a10; }
+  .mode-btn.club:hover { border-color: #ffa726; box-shadow: 0 8px 24px rgba(255, 167, 38, 0.15); }
+
+  /* Club selection grid */
+  .club-select-page {
+    text-align: center;
+    padding: 1rem 0;
+  }
+  .club-select-page h2 {
+    color: #ffa726;
+    font-size: 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+  .club-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+  .club-grid-btn {
+    background: #142038;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 0.65rem 0.5rem;
+    color: #e0e6ed;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .club-grid-btn:hover {
+    border-color: #ffa726;
+    color: #ffa726;
+    transform: translateY(-1px);
+  }
+  .back-link {
+    display: inline-block;
+    color: #78909c;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: #4fc3f7; }
 
   .guesses-remaining {
     text-align: center;
@@ -498,12 +543,20 @@
     .streak-info {
       font-size: 0.8rem;
     }
+    .club-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+    .club-grid-btn {
+      font-size: 0.78rem;
+      padding: 0.55rem 0.4rem;
+    }
   }
 </style>
 </head>
 <body>
-<h1>HODDLE</h1>
-<p class="subtitle">Guess the Barclays Premier League player</p>
+<h1 style="cursor:pointer" onclick="goHome()">HODDLE</h1>
+<p class="subtitle" style="cursor:pointer" onclick="goHome()">Guess the Barclays Premier League player</p>
 
 <div class="game-container">
   <div id="loading" class="loading">Loading players...</div>
@@ -515,11 +568,23 @@
           <div class="mode-name">Easy</div>
           <div class="mode-desc">Legends of the Barclays Premier League era</div>
         </button>
+        <button class="mode-btn club" onclick="showClubSelect()">
+          <div class="mode-name">Pick a Club</div>
+          <div class="mode-desc">Test yourself on a specific Premier League club</div>
+        </button>
         <button class="mode-btn hard" onclick="startGame('hard')">
           <div class="mode-name">All Players</div>
           <div class="mode-desc">Any player from the Barclays Premier League era</div>
         </button>
       </div>
+    </div>
+  </div>
+
+  <div id="club-select" style="display:none;">
+    <div class="club-select-page">
+      <span class="back-link" onclick="goHome()">&larr; Back</span>
+      <h2>Choose a Club</h2>
+      <div id="club-grid" class="club-grid"></div>
     </div>
   </div>
 
@@ -565,6 +630,7 @@ let gameOver = false;
 let activeIdx = -1;
 let guessedNames = new Set();
 let currentMode = null;
+let currentClub = null;
 
 const PL_CLUBS = [
   "Arsenal", "Aston Villa", "Birmingham City", "Blackburn Rovers",
@@ -834,9 +900,59 @@ async function loadPlayers() {
   }
 }
 
-function startGame(mode) {
+function showClubSelect() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('club-select').style.display = 'block';
+
+  const grid = document.getElementById('club-grid');
+  if (!grid.children.length) {
+    const sorted = [...PL_CLUBS].sort();
+    grid.innerHTML = sorted.map(club =>
+      `<button class="club-grid-btn" onclick="startGame('club', '${club.replace(/'/g, "\\'")}')">${esc(club)}</button>`
+    ).join('');
+  }
+}
+
+function goHome() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('club-select').style.display = 'none';
+  document.getElementById('landing').style.display = 'block';
+
+  // Reset game state
+  gameOver = false;
+  guessesLeft = 3;
+  guessedNames.clear();
+  target = null;
+  currentClub = null;
+  input.value = '';
+  input.disabled = false;
+  document.getElementById('remaining').textContent = 3;
+  document.getElementById('guess-history').innerHTML = '';
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('give-up-btn').style.display = '';
+  document.getElementById('game').querySelector('.guesses-remaining').style.display = '';
+  ['clue-clubs', 'clue-position', 'clue-photo'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('hidden');
+    el.classList.remove('revealed');
+  });
+
+  // Remove any lingering modal
+  const modal = document.querySelector('.modal-overlay');
+  if (modal) modal.remove();
+}
+
+function startGame(mode, clubName) {
   currentMode = mode;
-  const pool = mode === 'easy' ? easyPool : allPlayers;
+  currentClub = clubName || null;
+  let pool;
+  if (mode === 'easy') {
+    pool = easyPool;
+  } else if (mode === 'club') {
+    pool = allPlayers.filter(p => playedForClub(p, clubName));
+  } else {
+    pool = allPlayers;
+  }
   // Prefer players with an image
   const withImage = pool.filter(p => p.imageUrl);
   const pickFrom = withImage.length > 20 ? withImage : pool;
@@ -850,6 +966,7 @@ function startGame(mode) {
   guessedNames.clear();
 
   document.getElementById('landing').style.display = 'none';
+  document.getElementById('club-select').style.display = 'none';
   document.getElementById('game').style.display = 'block';
   document.getElementById('remaining').textContent = guessesLeft;
   renderClubs();
@@ -1017,7 +1134,7 @@ function submitGuess(name) {
 
 function buildShareText(won) {
   const totalGuesses = 3;
-  const modeName = currentMode === 'easy' ? 'Easy' : 'All Players';
+  const modeName = currentMode === 'easy' ? 'Easy' : currentMode === 'club' ? currentClub : 'All Players';
   // guessesLeft is only decremented on wrong guesses, so:
   // wrong guesses = 3 - guessesLeft
   // total guesses used = wrong guesses + (1 if won)
