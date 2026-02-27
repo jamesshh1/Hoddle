@@ -387,6 +387,8 @@
     justify-content: center;
     z-index: 100;
     animation: fadeIn 0.3s ease;
+    overflow-y: auto;
+    padding: 1rem;
   }
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -401,6 +403,9 @@
     width: 90%;
     text-align: center;
     animation: modalSlideIn 0.35s ease;
+    margin: auto;
+    max-height: 90vh;
+    overflow-y: auto;
   }
   @keyframes modalSlideIn {
     from { opacity: 0; transform: translateY(20px) scale(0.95); }
@@ -753,6 +758,21 @@ function playedForClub(player, clubName) {
   return player.clubs.some(c => baseClubName(c.name) === clubName);
 }
 
+// Check if player was at a club during a season that club was in the PL
+function playedForClubInPL(player, clubName) {
+  for (const c of player.clubs) {
+    if (baseClubName(c.name) !== clubName) continue;
+    const [start, end] = parseYears(c.years);
+    if (start === null) continue;
+    for (let season = Math.max(start, 2001); season <= Math.min(end - 1, 2015); season++) {
+      if (PL_SEASONS[season] && PL_SEASONS[season].includes(clubName)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function buildEasyPool() {
   const selected = new Set();
 
@@ -942,6 +962,18 @@ function goHome() {
   if (modal) modal.remove();
 }
 
+function playAgain() {
+  if (currentMode === 'club' && currentClub) {
+    const club = currentClub;
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) modal.remove();
+    goHome();
+    startGame('club', club);
+  } else {
+    location.reload();
+  }
+}
+
 function startGame(mode, clubName) {
   currentMode = mode;
   currentClub = clubName || null;
@@ -949,7 +981,7 @@ function startGame(mode, clubName) {
   if (mode === 'easy') {
     pool = easyPool;
   } else if (mode === 'club') {
-    pool = allPlayers.filter(p => playedForClub(p, clubName));
+    pool = allPlayers.filter(p => playedForClubInPL(p, clubName));
   } else {
     pool = allPlayers;
   }
@@ -1000,7 +1032,7 @@ function renderPhoto() {
   const el = document.getElementById('photo-content');
   if (target.imageUrl) {
     const attrHtml = target.imageAttribution
-      ? `<div class="photo-attribution">${esc(target.imageAttribution)}</div>`
+      ? `<div class="photo-attribution">Credit: ${esc(target.imageAttribution)}</div>`
       : '';
     el.innerHTML = `<img src="${esc(target.imageUrl)}" alt="Player photo">${attrHtml}`;
   } else {
@@ -1151,7 +1183,7 @@ function buildShareText(won) {
 function showResultModal(won, modeStats) {
   const shareText = buildShareText(won).trim();
   const attrHtml = target.imageAttribution
-    ? `<div class="photo-attribution">${esc(target.imageAttribution)}</div>`
+    ? `<div class="photo-attribution">Credit: ${esc(target.imageAttribution)}</div>`
     : '';
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1165,7 +1197,7 @@ function showResultModal(won, modeStats) {
       <div class="streak-info">${streakText(modeStats)}</div>
       <div class="btn-row">
         <button class="btn-copy" id="copy-btn">Copy Result</button>
-        <button class="btn" onclick="location.reload()">Play Again</button>
+        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
       </div>
     </div>
   `;
@@ -1291,7 +1323,7 @@ function showResultFooter(won, modeStats) {
       <div class="streak-info">${streakText(modeStats)}</div>
       <div class="btn-row" style="margin-top:1rem;">
         <button class="btn-copy" id="footer-copy-btn">Copy Result</button>
-        <button class="btn" onclick="location.reload()">Play Again</button>
+        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
       </div>
     </div>
   `;
