@@ -75,6 +75,15 @@
   .mode-btn.hard .mode-name { color: #c8102e; }
   .mode-btn.hard { border-color: #2a1040; }
   .mode-btn.hard:hover { border-color: #c8102e; box-shadow: 0 8px 24px rgba(200, 16, 46, 0.2); }
+  .mode-btn.completed {
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
+  }
+  .mode-btn.completed:hover {
+    transform: none;
+    box-shadow: none;
+  }
   .mode-btn.club .mode-name { color: #ffa726; }
   .mode-btn.club { border-color: #3e2a10; }
   .mode-btn.club:hover { border-color: #ffa726; box-shadow: 0 8px 24px rgba(255, 167, 38, 0.15); }
@@ -569,9 +578,9 @@
   <div id="landing" style="display:none;">
     <div class="landing">
       <div class="mode-buttons">
-        <button class="mode-btn easy" onclick="startGame('easy')">
-          <div class="mode-name">Easy</div>
-          <div class="mode-desc">Legends of the Barclays Premier League era</div>
+        <button class="mode-btn easy" id="easy-btn" onclick="startGame('easy')">
+          <div class="mode-name">Daily Challenge</div>
+          <div class="mode-desc" id="easy-desc">Legends of the Barclays Premier League era</div>
         </button>
         <button class="mode-btn club" onclick="showClubSelect()">
           <div class="mode-name">Pick a Club</div>
@@ -636,6 +645,59 @@ let activeIdx = -1;
 let guessedNames = new Set();
 let currentMode = null;
 let currentClub = null;
+
+// Seeded PRNG (mulberry32) for daily challenge
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function getTodayDateString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getTodaySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+function formatDateShort() {
+  const d = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+// Daily challenge localStorage helpers
+function loadDaily() {
+  try {
+    const raw = localStorage.getItem('hoddle-daily');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveDaily(result, guessesUsed) {
+  try {
+    localStorage.setItem('hoddle-daily', JSON.stringify({
+      date: getTodayDateString(),
+      result,
+      guessesUsed
+    }));
+  } catch {}
+}
+
+function isDailyCompleted() {
+  const daily = loadDaily();
+  return daily && daily.date === getTodayDateString();
+}
 
 const PL_CLUBS = [
   "Arsenal", "Aston Villa", "Birmingham City", "Blackburn Rovers",
@@ -960,10 +1022,18 @@ function goHome() {
   // Remove any lingering modal
   const modal = document.querySelector('.modal-overlay');
   if (modal) modal.remove();
+
+  updateEasyButton();
 }
 
 function playAgain() {
-  if (currentMode === 'club' && currentClub) {
+  if (currentMode === 'easy') {
+    // Daily challenge — go home (can't replay)
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) modal.remove();
+    goHome();
+    updateEasyButton();
+  } else if (currentMode === 'club' && currentClub) {
     const club = currentClub;
     const modal = document.querySelector('.modal-overlay');
     if (modal) modal.remove();
@@ -975,6 +1045,9 @@ function playAgain() {
 }
 
 function startGame(mode, clubName) {
+  // Block replay of daily if already completed
+  if (mode === 'easy' && isDailyCompleted()) return;
+
   currentMode = mode;
   currentClub = clubName || null;
   let pool;
@@ -985,10 +1058,20 @@ function startGame(mode, clubName) {
   } else {
     pool = allPlayers;
   }
-  // Prefer players with an image
-  const withImage = pool.filter(p => p.imageUrl);
-  const pickFrom = withImage.length > 20 ? withImage : pool;
-  target = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+
+  if (mode === 'easy') {
+    // Sort pool by name for stable ordering, then use seeded PRNG
+    const sorted = [...pool].sort((a, b) => a.name.localeCompare(b.name));
+    const withImage = sorted.filter(p => p.imageUrl);
+    const pickFrom = withImage.length > 20 ? withImage : sorted;
+    const rng = mulberry32(getTodaySeed());
+    target = pickFrom[Math.floor(rng() * pickFrom.length)];
+  } else {
+    // Prefer players with an image
+    const withImage = pool.filter(p => p.imageUrl);
+    const pickFrom = withImage.length > 20 ? withImage : pool;
+    target = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+  }
 
   // Autocomplete draws from the same pool
   players = pool;
@@ -1166,7 +1249,7 @@ function submitGuess(name) {
 
 function buildShareText(won) {
   const totalGuesses = 3;
-  const modeName = currentMode === 'easy' ? 'Easy' : currentMode === 'club' ? currentClub : 'All Players';
+  const modeName = currentMode === 'easy' ? `Daily (${formatDateShort()})` : currentMode === 'club' ? currentClub : 'All Players';
   // guessesLeft is only decremented on wrong guesses, so:
   // wrong guesses = 3 - guessesLeft
   // total guesses used = wrong guesses + (1 if won)
@@ -1197,7 +1280,7 @@ function showResultModal(won, modeStats) {
       <div class="streak-info">${streakText(modeStats)}</div>
       <div class="btn-row">
         <button class="btn-copy" id="copy-btn">Copy Result</button>
-        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
+        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : currentMode === 'easy' ? `<button class="btn" onclick="playAgain()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
       </div>
     </div>
   `;
@@ -1304,6 +1387,13 @@ function endGame(won) {
   // Update stats
   const modeStats = updateStats(won);
 
+  // Save daily result for easy mode
+  if (currentMode === 'easy') {
+    const wrongGuesses = 3 - guessesLeft;
+    const guessesUsed = won ? wrongGuesses + 1 : 3;
+    saveDaily(won ? 'win' : 'lose', guessesUsed);
+  }
+
   if (won) launchConfetti();
 
   showResultModal(won, modeStats);
@@ -1323,7 +1413,7 @@ function showResultFooter(won, modeStats) {
       <div class="streak-info">${streakText(modeStats)}</div>
       <div class="btn-row" style="margin-top:1rem;">
         <button class="btn-copy" id="footer-copy-btn">Copy Result</button>
-        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
+        ${currentMode === 'club' ? `<button class="btn" onclick="playAgain()">Same Club</button><button class="btn" onclick="location.reload()">Home</button>` : currentMode === 'easy' ? `<button class="btn" onclick="playAgain()">Home</button>` : `<button class="btn" onclick="playAgain()">Play Again</button>`}
       </div>
     </div>
   `;
@@ -1348,11 +1438,26 @@ function showResultFooter(won, modeStats) {
   });
 }
 
+function updateEasyButton() {
+  const btn = document.getElementById('easy-btn');
+  const desc = document.getElementById('easy-desc');
+  if (isDailyCompleted()) {
+    const daily = loadDaily();
+    btn.classList.add('completed');
+    const resultEmoji = daily.result === 'win' ? '\u2705' : '\u274c';
+    desc.textContent = `Completed ${resultEmoji} \u2014 ${daily.guessesUsed}/3 guesses`;
+  } else {
+    btn.classList.remove('completed');
+    desc.textContent = 'Legends of the Barclays Premier League era';
+  }
+}
+
 // Init
 (async () => {
   await loadPlayers();
   document.getElementById('loading').style.display = 'none';
   document.getElementById('landing').style.display = 'block';
+  updateEasyButton();
 })();
 </script>
 </body>
